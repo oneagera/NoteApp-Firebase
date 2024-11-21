@@ -5,7 +5,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.toObject
 import com.google.firebase.ktx.Firebase
 import com.markus.noteapp_firebase.domain.model.Note
 import kotlinx.coroutines.channels.awaitClose
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.callbackFlow
 
 const val NOTES_COLLECTION_REF = "notes" //reference/path to the firestore collection
 
-class StorageRepository() {
+class StorageRepository {
     fun user() = Firebase.auth.currentUser //get the current user
     fun hasUser(): Boolean = Firebase.auth.currentUser != null //check if usr is logged in
 
@@ -27,21 +26,22 @@ class StorageRepository() {
     fun getUserNotes(
         userId: String
     ): Flow<Resource<List<Note>>> =
-        callbackFlow {//coroutine flow helps to watch for data changes. Callback flow helps emit/execute data inside a callback
+        callbackFlow {
             var snapshotStateListener: ListenerRegistration? = null
 
             try {
                 //create a query to be sent to the firebase server
                 snapshotStateListener = notesRef
-                    .orderBy("timestamp") //arrange data by timestamp. OrderBy also has direction parameter to help order by ascending or descending. In this case we leave it at default
+                    .orderBy("timestamp")
                     .whereEqualTo(
                         "userId",
                         userId
-                    ) //limit/filter the fields that match only, in this case userId
+                    )
+                    .whereEqualTo("deleted", false)
                     .addSnapshotListener { snapshot, e ->
                         val response = if (snapshot != null) {
                             val notes =
-                                snapshot.toObjects(Note::class.java) //toObject transforms firestore data back to our data class
+                                snapshot.toObjects(Note::class.java)
                             Resource.Success(data = notes)
                         } else {
                             Resource.Error(throwable = e?.cause)
@@ -49,11 +49,37 @@ class StorageRepository() {
                         trySend(response)
                     }
             } catch (e: Exception) {
-                trySend(Resource.Error(e?.cause))
+                trySend(Resource.Error(e.cause))
                 e.printStackTrace()
             }
             awaitClose { //close callback
                 snapshotStateListener?.remove() //deregister the listener and remove the data
+            }
+        }
+
+    fun getTrashedUserNotes(userId: String): Flow<Resource<List<Note>>> =
+        callbackFlow {//coroutine flow helps to watch for data changes. Callback flow helps emit/execute data inside a callback
+            var snapshotStateListener: ListenerRegistration? = null
+            try {
+                snapshotStateListener = notesRef
+                    .orderBy("timestamp")
+                    .whereEqualTo("userId", userId)
+                    .whereEqualTo("deleted", true) // Only fetch trashed notes
+                    .addSnapshotListener { snapshot, e ->
+                        val response = if (snapshot != null) {
+                            val notes = snapshot.toObjects(Note::class.java)
+                            Resource.Success(data = notes)
+                        } else {
+                            Resource.Error(throwable = e?.cause)
+                        }
+                        trySend(response)
+                    }
+            } catch (e: Exception) {
+                trySend(Resource.Error(e.cause))
+                e.printStackTrace()
+            }
+            awaitClose {
+                snapshotStateListener?.remove()
             }
         }
 
@@ -88,13 +114,45 @@ class StorageRepository() {
             description,
             timestamp,
             colorIndex = color,
-            noteId = noteId
+            noteId = noteId,
+            deleted = false,
+            deletedTimestamp = null
         )
         notesRef
             .document(noteId)
             .set(note) //adds the data if there is an already existing doc it is going to overwrite with this data
             .addOnCompleteListener { result ->
                 onComplete.invoke(result.isSuccessful)
+            }
+    }
+
+    fun softDeleteNote(
+        noteId: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        val deletionData = mapOf(
+            "deleted" to true,
+            "deletedTimestamp" to Timestamp.now()
+        )
+        notesRef.document(noteId)
+            .update(deletionData)
+            .addOnCompleteListener {
+                onComplete.invoke(it.isSuccessful)
+            }
+    }
+
+    fun restoreNote(
+        noteId: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        val restoreData = mapOf(
+            "deleted" to false,
+            "deletedTimestamp" to null
+        )
+        notesRef.document(noteId)
+            .update(restoreData)
+            .addOnCompleteListener {
+                onComplete.invoke(it.isSuccessful)
             }
     }
 
@@ -122,9 +180,8 @@ class StorageRepository() {
             "description" to description,
             "title" to title
         )
-        //obtain the document and update the data
         notesRef.document(noteId)
-            .update(updateData)//alternatively .update("noteId", noteId) if you don't have many values but in this case we use the hashmap above.
+            .update(updateData)
             .addOnCompleteListener {
                 onResult(it.isSuccessful)
             }
@@ -134,7 +191,7 @@ class StorageRepository() {
 }
 
 
-sealed class Resource<T>( //<T> stands for generic type
+sealed class Resource<T>(
     val data: T? = null,
     val throwable: Throwable? = null
 ) {

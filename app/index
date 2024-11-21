@@ -1,0 +1,9 @@
+
+>>HomeViewModel
+fun softDeleteNote(noteId: String) = repository.softDeleteNote(noteId) {
+        homeUiState = homeUiState.copy(noteSoftDeletedStatus = it)
+    }
+
+    /*fun deleteNote(noteId: String) = repository.deleteNote(noteId) {
+        homeUiState = homeUiState.copy(noteDeletedStatus = it)
+    }*/

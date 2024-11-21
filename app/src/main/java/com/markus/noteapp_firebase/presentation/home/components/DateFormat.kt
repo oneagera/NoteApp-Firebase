@@ -1,4 +1,4 @@
-package com.markus.noteapp_firebase.presentation.home
+package com.markus.noteapp_firebase.presentation.home.components
 
 import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat

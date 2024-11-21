@@ -1,4 +1,4 @@
-package com.markus.noteapp_firebase.presentation.home
+package com.markus.noteapp_firebase.presentation.trash
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,24 +12,28 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
-    val repository: StorageRepository
+class TrashViewModel @Inject constructor(
+    private val repository: StorageRepository
 ) : ViewModel() {
-
-    var homeUiState by mutableStateOf(HomeUiState())
+    var trashUiState by mutableStateOf(TrashUiState())
 
     val hasUser: Boolean
         get() = repository.hasUser()
+
     private val userId: String
         get() = repository.getUserId()
+
+    init {
+        loadNotes()
+    }
 
     fun loadNotes() {
         if (hasUser) {
             if (userId.isNotBlank()) {
-                getUserNotes(userId)
+                getTrashedUserNotes()
             }
         } else {
-            homeUiState = homeUiState.copy(
+            trashUiState = trashUiState.copy(
                 notesList = Resource.Error(
                     throwable = Throwable(message = "User is not logged in")
                 )
@@ -37,17 +41,22 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-
-    private fun getUserNotes(userId: String) = viewModelScope.launch {
-        repository.getUserNotes(userId).collect {
-            homeUiState = homeUiState.copy(notesList = it)
+    private fun getTrashedUserNotes() = viewModelScope.launch {
+        repository.getTrashedUserNotes(userId).collect {
+            trashUiState = trashUiState.copy(notesList = it)
         }
     }
 
-    fun softDeleteNote(noteId: String) = repository.softDeleteNote(noteId) {
-        homeUiState = homeUiState.copy(noteSoftDeletedStatus = it)
+    fun restoreNote(noteId: String) {
+        repository.restoreNote(noteId) { success ->
+            if (success) getTrashedUserNotes()
+        }
+    }
+
+    fun deleteNotePermanently(noteId: String) = repository.deleteNote(noteId) {
+        trashUiState = trashUiState.copy(noteDeletedStatus = it)
     }
 
     fun signOut() = repository.signOut()
-
 }
+

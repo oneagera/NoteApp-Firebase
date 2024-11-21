@@ -28,15 +28,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun LoginScreen(
-    loginViewModel: LoginViewModel? = null,
+    loginViewModel: LoginViewModel = hiltViewModel(),
     onNavigateToHomePage: () -> Unit,
     onNavigateToSignUpPage: () -> Unit
 ) {
-    val loginUiState = loginViewModel?.loginUiState
-    val isError = loginUiState?.loginError != null
+    val loginUiState = loginViewModel.loginUiState
+    val isError = loginUiState.loginError != null
     val context = LocalContext.current
 
     Column(
@@ -51,7 +52,7 @@ fun LoginScreen(
         )
         if (isError) {
             Text(
-                text = loginUiState?.loginError ?: "unknown error",
+                text = loginUiState.loginError ?: "unknown error",
                 color = Color.Red
             )
         }
@@ -60,8 +61,8 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            value = loginUiState?.userName ?: "",
-            onValueChange = { loginViewModel?.onUserNameChange(it) },
+            value = loginUiState.userName,
+            onValueChange = { loginViewModel.onUserNameChange(it) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Person,
@@ -71,15 +72,15 @@ fun LoginScreen(
             label = {
                 Text(text = "Email")
             },
-            isError = isError //automatically changes the color of text field
+            isError = isError
         )
 
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            value = loginUiState?.password ?: "",
-            onValueChange = { loginViewModel?.onPasswordChange(it) },
+            value = loginUiState.password,
+            onValueChange = { loginViewModel.onPasswordChange(it) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
@@ -89,11 +90,11 @@ fun LoginScreen(
             label = {
                 Text(text = "Password")
             },
-            visualTransformation = PasswordVisualTransformation(), //to hide the password
-            isError = isError //automatically changes the color of text field
+            visualTransformation = PasswordVisualTransformation(),
+            isError = isError
         )
 
-        Button(onClick = { loginViewModel?.loginUser(context) }) {
+        Button(onClick = { loginViewModel.loginUser(context) }) {
             Text(text = "Sign In")
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -108,21 +109,19 @@ fun LoginScreen(
             TextButton(
                 onClick = {
                     onNavigateToSignUpPage.invoke()
-                    loginViewModel?.onNavigate()
+                    loginViewModel.onNavigate()
                 }
             ) {
                 Text(text = "Sign Up")
             }
         }
-        if (loginUiState?.isLoading == true) {
+        if (loginUiState.isLoading) {
             CircularProgressIndicator()
         }
         LaunchedEffect(
-            key1 = loginViewModel?.hasUser
+            key1 = loginViewModel.hasUser
         ) {
-            //Launched effect so when the usr has successfully loged in we can navigate to home page. LE Because this is a side effect from firebase and not jetpack compose
-            //LE is going to smooth everything because we could have multiple changes and the state could be out of sync
-            if (loginViewModel?.hasUser == true) {
+            if (loginViewModel.hasUser) {
                 onNavigateToHomePage.invoke()
             }
         }

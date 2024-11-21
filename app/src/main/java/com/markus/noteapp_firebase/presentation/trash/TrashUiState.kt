@@ -1,9 +1,9 @@
-package com.markus.noteapp_firebase.presentation.home
+package com.markus.noteapp_firebase.presentation.trash
 
 import com.markus.noteapp_firebase.domain.model.Note
 import com.markus.noteapp_firebase.domain.repository.Resource
 
-data class HomeUiState(
+data class TrashUiState(
     val notesList: Resource<List<Note>> = Resource.Loading(),
-    val noteSoftDeletedStatus: Boolean = false
+    val noteDeletedStatus: Boolean = false
 )

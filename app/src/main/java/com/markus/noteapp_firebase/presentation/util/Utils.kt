@@ -1,4 +1,4 @@
-package com.markus.noteapp_firebase
+package com.markus.noteapp_firebase.presentation.util
 
 import androidx.compose.ui.graphics.Color
 

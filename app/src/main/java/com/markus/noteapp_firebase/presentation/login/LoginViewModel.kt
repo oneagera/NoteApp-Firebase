@@ -8,18 +8,20 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markus.noteapp_firebase.domain.repository.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class LoginViewModel(
-    private val repository: AuthRepository = AuthRepository()
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val repository: AuthRepository
 ) : ViewModel() {
-    val currentUser = repository.currentUser
 
     val hasUser: Boolean
         get() = repository.hasUser()
 
     var loginUiState by mutableStateOf(LoginUiState())
-        private set //can only be modified inside the LoginViewModel class
+        private set
 
     fun onUserNameChange(userName: String) {
         loginUiState = loginUiState.copy(userName = userName)
@@ -54,8 +56,7 @@ class LoginViewModel(
                 loginUiState.passwordSignUp.isNotBlank() &&
                 loginUiState.confirmpasswordSignUp.isNotBlank()
 
-    //create a usr
-    fun createUser(context: Context) = viewModelScope.launch {  //Context to display toast msg
+    fun createUser(context: Context) = viewModelScope.launch {
         try {
             if (!validateSignUpForm()) {
                 throw IllegalArgumentException("email and password cannot be empty")
@@ -94,7 +95,7 @@ class LoginViewModel(
     }
 
     //login usr
-    fun loginUser(context: Context) = viewModelScope.launch {  //Context to display toast msg
+    fun loginUser(context: Context) = viewModelScope.launch {
         try {
             if (!validateLoginForm()) {
                 throw IllegalArgumentException("email and password cannot be empty")

@@ -71,7 +71,7 @@ fun SignUpScreen(
             label = {
                 Text(text = "Email")
             },
-            isError = isError //automatically changes the color of text field
+            isError = isError
         )
 
         OutlinedTextField(
@@ -89,8 +89,8 @@ fun SignUpScreen(
             label = {
                 Text(text = "Password")
             },
-            visualTransformation = PasswordVisualTransformation(), //to hide the password
-            isError = isError //automatically changes the color of text field
+            visualTransformation = PasswordVisualTransformation(),
+            isError = isError
         )
 
         OutlinedTextField(
@@ -134,8 +134,6 @@ fun SignUpScreen(
         LaunchedEffect(
             key1 = loginViewModel?.hasUser
         ) {
-            //Launched effect so when the usr has successfully loged in we can navigate to home page. LE Because this is a side effect from firebase and not jetpack compose
-            //LE is going to smooth everything because we could have multiple changes and the state could be out of sync
             if (loginViewModel?.hasUser == true) {
                 onNavigateToHomePage.invoke()
             }

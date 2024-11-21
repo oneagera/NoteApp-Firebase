@@ -8,9 +8,12 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.markus.noteapp_firebase.domain.model.Note
 import com.markus.noteapp_firebase.domain.repository.StorageRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class DetailViewModel(
-    private val repository: StorageRepository = StorageRepository()
+@HiltViewModel
+class DetailViewModel @Inject constructor(
+    private val repository: StorageRepository
 ) : ViewModel() {
     var detailUiState by mutableStateOf(DetailUiState())
         private set
@@ -49,7 +52,7 @@ class DetailViewModel(
         }
     }
 
-    fun setEditFields(note: Note) {
+    private fun setEditFields(note: Note) {
         detailUiState = detailUiState.copy(
             colorIndex = note.colorIndex,
             title = note.title,

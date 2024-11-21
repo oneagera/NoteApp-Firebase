@@ -8,5 +8,7 @@ data class Note(
     val description: String = "",
     val timestamp: Timestamp = Timestamp.now(),
     val colorIndex: Int = 0,
-    val noteId: String = ""
+    val noteId: String = "",
+    val deleted: Boolean = false,
+    val deletedTimestamp: Timestamp? = null
 )

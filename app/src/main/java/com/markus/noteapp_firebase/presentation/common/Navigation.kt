@@ -1,21 +1,21 @@
-package com.markus.noteapp_firebase.presentation.util
+package com.markus.noteapp_firebase.presentation.common
 
+import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.markus.noteapp_firebase.presentation.detail.DetailScreen
-import com.markus.noteapp_firebase.presentation.detail.DetailViewModel
 import com.markus.noteapp_firebase.presentation.home.HomeScreen
-import com.markus.noteapp_firebase.presentation.home.HomeViewModel
 import com.markus.noteapp_firebase.presentation.login.LoginScreen
 import com.markus.noteapp_firebase.presentation.login.LoginViewModel
 import com.markus.noteapp_firebase.presentation.login.SignUpScreen
+import com.markus.noteapp_firebase.presentation.trash.TrashScreen
+import kotlinx.coroutines.CoroutineScope
 
 enum class LoginRoutes {
     SignUp,
@@ -24,7 +24,8 @@ enum class LoginRoutes {
 
 enum class HomeRoutes {
     Home,
-    Detail
+    Detail,
+    Trash
 }
 
 enum class NestedRoutes {
@@ -34,10 +35,10 @@ enum class NestedRoutes {
 
 @Composable
 fun Navigation(
-    navController: NavHostController = rememberNavController(),
+    navController: NavHostController,
     loginViewModel: LoginViewModel,
-    detailViewModel: DetailViewModel,
-    homeViewModel: HomeViewModel
+    scope: CoroutineScope,
+    drawerState: DrawerState
 ) {
     NavHost(
         navController = navController,
@@ -48,18 +49,17 @@ fun Navigation(
         }
 
     ) {
-        authGraph(navController, loginViewModel)
+        authGraph(navController)
         homeGraph(
             navController = navController,
-            detailViewModel,
-            homeViewModel
+            scope,
+            drawerState
         )
     }
 }
 
 fun NavGraphBuilder.authGraph(
-    navController: NavHostController,
-    loginViewModel: LoginViewModel
+    navController: NavHostController
 ) {
     navigation(
         startDestination = LoginRoutes.SignIn.name,
@@ -76,8 +76,7 @@ fun NavGraphBuilder.authGraph(
                                 true //removes the signin page from backstack so that when usr presses back button on home page, it exits the app not go back to signin page
                         }
                     }
-                },
-                loginViewModel = loginViewModel
+                }
             ) {
                 navController.navigate(LoginRoutes.SignUp.name) {
                     launchSingleTop = true
@@ -96,8 +95,7 @@ fun NavGraphBuilder.authGraph(
                             inclusive = true
                         }
                     }
-                },
-                loginViewModel = loginViewModel
+                }
             ) {
                 navController.navigate(LoginRoutes.SignIn.name)
             }
@@ -107,8 +105,8 @@ fun NavGraphBuilder.authGraph(
 
 fun NavGraphBuilder.homeGraph(
     navController: NavHostController,
-    detailViewModel: DetailViewModel,
-    homeViewModel: HomeViewModel
+    scope: CoroutineScope,
+    drawerState: DrawerState
 ) {
     navigation(
         startDestination = HomeRoutes.Home.name,
@@ -116,7 +114,6 @@ fun NavGraphBuilder.homeGraph(
     ) {
         composable(HomeRoutes.Home.name) {
             HomeScreen(
-                homeViewModel = homeViewModel,
                 onNoteClick = { noteId ->
                     navController.navigate(
                         HomeRoutes.Detail.name + "?id=$noteId"
@@ -126,15 +123,19 @@ fun NavGraphBuilder.homeGraph(
                 },
                 navigateToDetailPage = {
                     navController.navigate(HomeRoutes.Detail.name)
-                }
-            ) {
-                navController.navigate(NestedRoutes.Login.name) {
-                    launchSingleTop = true
-                    popUpTo(0) {//remove everything from backstack
-                        inclusive = true //including this(Login.name)
+                },
+                navigateToLoginPage = {
+                    navController.navigate(NestedRoutes.Login.name) {
+                        launchSingleTop = true
+                        popUpTo(0) {//remove everything from backstack
+                            inclusive = true //including this(Login.name)
+                        }
                     }
-                }
-            }
+                },
+                scope = scope,
+                drawerState = drawerState,
+                navController = navController
+            )
         }
 
         composable(
@@ -146,11 +147,37 @@ fun NavGraphBuilder.homeGraph(
                 }
             )
         ) { entry ->
-            
+
             DetailScreen(
-                detailViewModel = detailViewModel,
                 noteId = entry.arguments?.getString("id") as String,
-                onNavigate = { navController.navigate(HomeRoutes.Home.name) }
+                onNavigate = {
+                    navController.navigate(HomeRoutes.Home.name) {
+                        launchSingleTop =
+                            true
+                        popUpTo(route = HomeRoutes.Detail.name) {
+                            inclusive =
+                                true
+                        }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = HomeRoutes.Trash.name
+        ) {
+            TrashScreen(
+                navigateToLoginPage = {
+                    navController.navigate(NestedRoutes.Login.name) {
+                        launchSingleTop = true
+                        popUpTo(0) {//remove everything from backstack
+                            inclusive = true //including this(Login.name)
+                        }
+                    }
+                },
+                navController = navController,
+                scope = scope,
+                drawerState = drawerState
             )
         }
     }

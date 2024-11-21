@@ -1,6 +1,7 @@
 package com.markus.noteapp_firebase.presentation.detail
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -17,18 +18,17 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,26 +36,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.markus.noteapp_firebase.Utils
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.markus.noteapp_firebase.presentation.util.Utils
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "CoroutineCreationDuringComposition")
 @Composable
 fun DetailScreen(
-    detailViewModel: DetailViewModel?,
+    detailViewModel: DetailViewModel = hiltViewModel(),
     noteId: String,
     onNavigate: () -> Unit
 ) {
-    val detailUiState = detailViewModel?.detailUiState ?: DetailUiState()
+    val detailUiState = detailViewModel.detailUiState
 
     val isFormsNotBlank = detailUiState.note.isNotBlank() && //check if the forms are blank
             detailUiState.title.isNotBlank()
 
-    val selectedColor by animateColorAsState( //animation to change btwn colors
+    val selectedColor by animateColorAsState( //animation to change among colors
         targetValue = Utils.colors[detailUiState.colorIndex], label = ""
     )
 
@@ -65,11 +63,22 @@ fun DetailScreen(
 
     LaunchedEffect(key1 = Unit) {
         if (isNoteIdNotBlank) {
-            detailViewModel?.getNote(noteId)
+            detailViewModel.getNote(noteId)
         } else {
-            detailViewModel?.resetState()
+            detailViewModel.resetState()
         }
     }
+    BackHandler(
+        enabled = isFormsNotBlank // Enable only if fields are not blank
+    ) {
+        if (isNoteIdNotBlank) {
+            detailViewModel.updateNote(noteId)
+        } else {
+            detailViewModel.addNote()
+        }
+        onNavigate.invoke()
+    }
+
     val scope = rememberCoroutineScope() //coroutineScope
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -80,9 +89,9 @@ fun DetailScreen(
                 FloatingActionButton(
                     onClick = {
                         if (isNoteIdNotBlank) {
-                            detailViewModel?.updateNote(noteId)
+                            detailViewModel.updateNote(noteId)
                         } else {
-                            detailViewModel?.addNote()
+                            detailViewModel.addNote()
                         }
                         onNavigate.invoke()
                     }
@@ -102,17 +111,17 @@ fun DetailScreen(
                 .padding(paddingValues)
         ) {
             if (detailUiState.noteAddedStatus) {
-                scope.launch {//launch in scope
+                scope.launch {
                     snackbarHostState.showSnackbar("Note Added")
-                    detailViewModel?.resetNoteAddedStatus() //reset the state
-                    onNavigate.invoke() //navigate back to homescreen
+                    detailViewModel.resetNoteAddedStatus() //reset the state
+                    onNavigate.invoke() //navigate back to home screen
                 }
             }
 
             if (detailUiState.updateNoteStatus) {
                 scope.launch {
                     snackbarHostState.showSnackbar("Note Updated")
-                    detailViewModel?.resetNoteAddedStatus()
+                    detailViewModel.resetNoteAddedStatus()
                     onNavigate.invoke()
                 }
             }
@@ -125,33 +134,45 @@ fun DetailScreen(
                     horizontal = 8.dp
                 )
             ) {
-                //items index. contains items/colors and also gives colorIndex
                 itemsIndexed(Utils.colors) { colorIndex, color ->
                     ColorItem(color = color) {
-                        detailViewModel?.onColorChange(colorIndex)
+                        detailViewModel.onColorChange(colorIndex)
                     }
                 }
             }
 
             OutlinedTextField(
                 value = detailUiState.title,
-                onValueChange = { detailViewModel?.onTitleChange(it) },
-                label = { Text(text = "Title") },
+                onValueChange = { detailViewModel.onTitleChange(it) },
+                label = {
+                    Text(
+                        text = "Title",
+                        color = Color.Black
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                textStyle = MaterialTheme.typography.labelMedium
+                textStyle = MaterialTheme.typography.titleMedium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Black,
+                    unfocusedBorderColor = Color.Black
+                )
             )
 
             OutlinedTextField(
                 value = detailUiState.note,
-                onValueChange = { detailViewModel?.onNoteChange(it) },
+                onValueChange = { detailViewModel.onNoteChange(it) },
                 label = { Text(text = "Notes") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) //to occupy space left by other items
+                    .weight(1f)
                     .padding(8.dp),
-                textStyle = MaterialTheme.typography.labelSmall
+                textStyle = MaterialTheme.typography.headlineSmall,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Black,
+                    unfocusedBorderColor = Color.Black
+                )
             )
         }
     }

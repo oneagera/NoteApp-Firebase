@@ -1,9 +1,9 @@
 plugins {
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
-    id("com.google.gms.google-services")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.kotlinAndroidKsp)
+    alias(libs.plugins.hiltAndroid)
 }
 
 android {
@@ -43,7 +43,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.13"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
@@ -62,8 +62,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -75,18 +75,26 @@ dependencies {
     // Compose dependencies
     implementation (libs.androidx.lifecycle.viewmodel.compose)
     implementation (libs.androidx.navigation.compose)
-    implementation ("androidx.compose.material:material-icons-extended")
+    //optional - extended material icons not included in androidx.compose.material:material-icons-core
+    //which is included in **implementation("androidx.compose.material3:material3") dependency
+    implementation (libs.androidx.material.icons.extended)
     implementation (libs.androidx.hilt.navigation.compose)
+
+    // Import the BoM for the Firebase platform
+    implementation(platform(libs.firebase.bom))
+    //authentication
+    implementation(libs.firebase.auth.ktx)
+    //firestore
+    implementation(libs.firebase.firestore.ktx)
+    // coroutine
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    //dagger hilt dependency
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    ksp (libs.androidx.hilt.compiler)
 
     // Coroutines
     implementation (libs.kotlinx.coroutines.core)
     implementation (libs.kotlinx.coroutines.android)
-
-    // Import the BoM for the Firebase platform
-    implementation(libs.firebase.bom)
-
-    //dagger hilt dependency
-    implementation("com.google.dagger:hilt-android:2.48.1")
-    ksp("com.google.dagger:hilt-android-compiler:2.44")
-    ksp ("androidx.hilt:hilt-compiler:1.1.0")
 }

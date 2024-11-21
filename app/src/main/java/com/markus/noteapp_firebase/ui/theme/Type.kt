@@ -3,44 +3,43 @@ package com.markus.noteapp_firebase.ui.theme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.markus.noteapp_firebase.presentation.util.FontFamily
 
-// Set of Material typography styles to start with
+val fontFamily = FontFamily()
 val Typography = Typography(
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = fontFamily.fontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     //note content
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
+    headlineSmall = TextStyle(
+        fontFamily = fontFamily.fontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
-        lineHeight = 28.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.5.sp,
         color = Color.Black
     ),
     //note title
-    labelMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.ExtraBold,
+    titleMedium = TextStyle(
+        fontFamily = fontFamily.fontFamily,
+        fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.5.sp,
         color = Color.Black
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = fontFamily.fontFamily,
         fontWeight = FontWeight.Light,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
-        color = Color.Black
+        letterSpacing = 0.5.sp
     )
     /* Other default text styles to override
     titleLarge = TextStyle(

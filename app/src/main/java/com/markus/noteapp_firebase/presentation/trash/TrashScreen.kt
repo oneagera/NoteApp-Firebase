@@ -1,6 +1,5 @@
-package com.markus.noteapp_firebase.presentation.home
+package com.markus.noteapp_firebase.presentation.trash
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,13 +9,13 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
@@ -25,49 +24,49 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.markus.noteapp_firebase.domain.model.Note
 import com.markus.noteapp_firebase.domain.repository.Resource
 import com.markus.noteapp_firebase.presentation.common.NavigationDrawer
 import com.markus.noteapp_firebase.presentation.common.ScaffoldItem
-import com.markus.noteapp_firebase.presentation.home.components.HomeTopAppBarItem
-import com.markus.noteapp_firebase.presentation.home.components.NoteItem
+import com.markus.noteapp_firebase.presentation.trash.components.TrashTopBarItem
+import com.markus.noteapp_firebase.presentation.trash.components.TrashedNoteItem
 import com.markus.noteapp_firebase.presentation.common.MultiSelectionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    homeViewModel: HomeViewModel = hiltViewModel(),
-    onNoteClick: (id: String) -> Unit,
-    navigateToDetailPage: () -> Unit,
+fun TrashScreen(
     navigateToLoginPage: () -> Unit,
+    navController: NavController,
     scope: CoroutineScope,
     drawerState: DrawerState,
-    navController: NavController
+    trashViewModel: TrashViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(key1 = Unit) {
-        homeViewModel.loadNotes()
-    }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val homeUiState = homeViewModel.homeUiState
-
-    val items = homeUiState.notesList.data ?: emptyList()
+    val trashUiState = trashViewModel.trashUiState
+    val items = trashUiState.notesList.data ?: emptyList<Note>().filter { it.deleted }
 
     val multiSelectionManager = remember { MultiSelectionManager<String>() }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    var isMoreSectionVisible by remember {
+        mutableStateOf(false)
+    }
 
-    BackHandler(
-        enabled = multiSelectionManager.getSelectedNoteCount() > 0
-    ) {
-        multiSelectionManager.deselectAllNotes() // Deselect all items on back press
+    LaunchedEffect(key1 = Unit) {
+        trashViewModel.loadNotes()
     }
 
     NavigationDrawer(
@@ -75,7 +74,7 @@ fun HomeScreen(
         scope = scope,
         drawerState = drawerState,
         navigateToLoginPage = {
-            homeViewModel.signOut()
+            trashViewModel.signOut()
             navigateToLoginPage.invoke()
         },
         content = {
@@ -83,24 +82,35 @@ fun HomeScreen(
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (multiSelectionManager.isMultiSelectionEnabled) {
-                        HomeTopAppBarItem(
-                            count = multiSelectionManager.getSelectedNoteCount(),
+                        TrashTopBarItem(
                             onDeleteClick = {
+                                multiSelectionManager.getSelectedNoteCount()
                                 multiSelectionManager.selectedNotes.forEach { noteId ->
-                                    homeViewModel.softDeleteNote(noteId)
+                                    trashViewModel.deleteNotePermanently(noteId)
+                                    multiSelectionManager.deselectAllNotes()
                                 }
-                                !multiSelectionManager.isMultiSelectionEnabled
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("note deleted")
+                                    snackbarHostState.showSnackbar("note deleted permanently")
+                                }
+                            },
+                            onRestoreClick = {
+                                multiSelectionManager.getSelectedNoteCount()
+                                multiSelectionManager.selectedNotes.forEach { noteId ->
+                                    trashViewModel.restoreNote(noteId)
+                                    multiSelectionManager.deselectAllNotes()
+                                }
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("note restored")
                                 }
                             },
                             onCancel = { multiSelectionManager.deselectAllNotes() },
                             areAllItemsSelected = multiSelectionManager.areAllNotesSelected(items.map { it.noteId }),
+                            count = multiSelectionManager.getSelectedNoteCount(),
                             selectAllItems = { multiSelectionManager.selectAllNotes(items.map { it.noteId }) },
-                            selectedNoteTimestamp = items.find { it.noteId == multiSelectionManager.getSingleSelectedNote() }?.timestamp
                         )
                     } else {
                         TopAppBar(
+                            title = { Text(text = "Trash") },
                             navigationIcon = {
                                 IconButton(
                                     onClick = {
@@ -114,36 +124,51 @@ fun HomeScreen(
                                 }
                             },
                             actions = {
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(message = "Sort function under construction.")
-                                        }
-                                    }
-                                ) {
+                                IconButton(onClick = {
+                                    isMoreSectionVisible = !isMoreSectionVisible
+                                }) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                                        imageVector = Icons.Default.MoreVert,
                                         contentDescription = null
                                     )
                                 }
-                            },
-                            title = { Text(text = "Notes") }
+                                DropdownMenu(
+                                    expanded = isMoreSectionVisible,
+                                    onDismissRequest = {
+                                        isMoreSectionVisible = false
+                                    },
+                                    offset = DpOffset(x = 0.dp, y = (-16).dp)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(text = "Empty trash") },
+                                        onClick = {
+                                            multiSelectionManager.selectAllNotes(items.filter { it.deleted }
+                                                .map { it.noteId })
+                                            multiSelectionManager.selectedNotes.forEach { noteId ->
+                                                trashViewModel.deleteNotePermanently(noteId)
+                                            }
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    message =
+                                                    if (multiSelectionManager.getSelectedNoteCount() > 1) {
+                                                        "notes deleted permanently"
+                                                    } else {
+                                                        "note deleted permanently"
+                                                    }
+                                                )
+                                            }
+                                            isMoreSectionVisible = false
+                                        }
+                                    )
+                                }
+                            }
                         )
                     }
                 },
-                fab = {
-                    FloatingActionButton(
-                        onClick = { navigateToDetailPage.invoke() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null
-                        )
-                    }
-                },
+                fab = { },
                 content = { paddingValues ->
                     Column(modifier = Modifier.padding(paddingValues)) {
-                        when (homeUiState.notesList) {
+                        when (trashUiState.notesList) {
                             is Resource.Loading -> {
                                 CircularProgressIndicator(
                                     modifier = Modifier
@@ -161,7 +186,7 @@ fun HomeScreen(
                                         val isSelected =
                                             multiSelectionManager.selectedNotes.contains(note.noteId)
 
-                                        NoteItem(
+                                        TrashedNoteItem(
                                             note = note,
                                             onLongClick = {
                                                 multiSelectionManager.toggleNoteSelection(note.noteId)
@@ -169,8 +194,6 @@ fun HomeScreen(
                                             onClick = {
                                                 if (multiSelectionManager.isMultiSelectionEnabled) {
                                                     multiSelectionManager.toggleNoteSelection(note.noteId)
-                                                } else {
-                                                    onNoteClick.invoke(note.noteId)
                                                 }
                                             },
                                             isSelected = isSelected
@@ -181,7 +204,7 @@ fun HomeScreen(
 
                             else -> {
                                 Text(
-                                    text = homeUiState.notesList.throwable?.localizedMessage
+                                    text = trashUiState.notesList.throwable?.localizedMessage
                                         ?: "Unknown Error",
                                     color = Color.Red
                                 )
