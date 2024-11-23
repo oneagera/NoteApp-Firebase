@@ -1,3 +1,11 @@
+Note app using firebase authentication and cloud firestore. Multiselection and deleted note restoration features implemented. Sort function in the works.
+Technologies used:
+•	Kotlin
+•	Jetpack Compose
+•	MVVM Architecture
+•	Dagger-hilt
+•	Firebase
+
 Screenshots
 
 
